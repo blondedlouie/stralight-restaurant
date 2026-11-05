@@ -1,0 +1,24 @@
+# Dependencies
+/node_modules/
+
+# Next.js
+/.next/
+/out/
+/build/
+
+# Local environment files
+.env*
+
+# Generated artifacts
+*.tsbuildinfo
+/coverage/
+/.vercel/
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Local/OS files
+.DS_Store
+*.pem

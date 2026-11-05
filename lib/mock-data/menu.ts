@@ -1,0 +1,1 @@
+export {mockMenu} from "./index";

@@ -1,0 +1,41 @@
+# Starlight Restaurant Configuration & API Manual
+
+This document provides exact steps to configure Supabase, PostGIS, Geolocation coordinates, and Safaricom Daraja M-PESA.
+
+---
+
+## 1. Supabase & PostGIS Configuration
+
+### 1.1 Project Creation & Extension Activation
+1. Sign in to your [Supabase Dashboard](https://supabase.com).
+2. Create a new project (select Region: **EU Central (Frankfurt)** or **South Africa (Johannesburg)** for lowest latency to Kenya).
+3. Open the **SQL Editor** in the left sidebar.
+4. Open the `schema.sql` file generated in the project root, copy its entire contents, paste it into the Supabase SQL editor, and click **Run**.
+5. This automatically:
+   - Enables the `postgis` spatial extension.
+   - Creates `branches`, `menu_categories`, `menu_items`, `menu_item_variants`, `orders`, and `order_items`.
+   - Sets up the `route_customer_order(lat, lng)` spatial stored function.
+   - Seeds all 13 branches (Eastleigh cluster, South C, Hurlingham, Lavington, Muthangari, Bamburi).
+   - Seeds menu items with variant pricing.
+
+### 1.2 Enable Realtime Replication
+1. In your Supabase Dashboard, go to **Database** -> **Replication**.
+2. Look for the `supabase_realtime` publication.
+3. Ensure the toggle is switched **ON** for both:
+   - `orders` (Required for live order pipelines, payment triggers, and kitchen tablet chimes)
+   - `order_items`
+
+### 1.3 Setting Bounding Geofences for Nairobi Delivery Polygons
+The PostGIS stored function resolves customer delivery capability through spatial polygon containment. Default centroid points and sample polygons are provided in `schema.sql`.
+
+To customize the delivery perimeter for any branch (for example, expanding Jam Street or South C):
+```sql
+UPDATE branches
+SET delivery_boundary = ST_SetSRID(ST_GeomFromText('POLYGON((
+  36.8400 -1.2700,
+  36.8650 -1.2700,
+  36.8650 -1.2850,
+  36.8400 -1.2850,
+  36.8400 -1.2700
+))'), 4326)
+WHERE slug = 'eastleigh-jam';
