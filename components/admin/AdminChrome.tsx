@@ -23,16 +23,29 @@ export function AdminChrome({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (pathname === "/admin/login") return;
     let active = true;
-    const mockMode=process.env.NEXT_PUBLIC_ENABLE_SANDBOX === "true" && process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true";
+    const mockMode=process.env.NEXT_PUBLIC_ENABLE_SANDBOX === "true" && process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true" && process.env.NODE_ENV !== "production";
     if(mockMode){void fetch("/api/auth/session").then(response=>response.json()).then(body=>{if(active&&body.user){setRole(body.user.role);setStaffName(body.user.full_name);}});return ()=>{active=false;};}
-    void supabase.auth.getUser().then(async ({ data }) => {
-      if (!active || !data.user) return;
-      const { data: profile } = await supabase.from("user_profiles").select("role,full_name").eq("user_id", data.user.id).maybeSingle();
-      if (active && profile) {
-        setRole(profile.role);
-        setStaffName(profile.full_name);
-      }
-    });
+    const loadSupabaseProfile = () => {
+      void supabase.auth.getUser().then(async ({ data }) => {
+        if (!active || !data.user) return;
+        const { data: profile } = await supabase.from("user_profiles").select("role,full_name").eq("user_id", data.user.id).maybeSingle();
+        if (active && profile) {
+          setRole(profile.role);
+          setStaffName(profile.full_name);
+        }
+      });
+    };
+    void fetch("/api/sandbox/session", { cache: "no-store" })
+      .then(async (response) => response.ok ? await response.json() as { active: boolean; role: string } : null)
+      .then((session) => {
+        if (!active) return;
+        if (session?.active && session.role) setRole(session.role);
+        else loadSupabaseProfile();
+      })
+      .catch((error) => {
+        console.error("Unable to load simulation session", error);
+        loadSupabaseProfile();
+      });
     if (process.env.NEXT_PUBLIC_ENABLE_SANDBOX === "true") {
       const previewRole = document.cookie.split("; ").find((cookie) => cookie.startsWith("starlight-sandbox-role="))?.split("=")[1];
       if (previewRole) setRole(decodeURIComponent(previewRole));
@@ -46,6 +59,7 @@ export function AdminChrome({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut();
     await fetch("/api/auth/session", { method: "DELETE" });
     document.cookie = "starlight-sandbox-role=; path=/; max-age=0";
+    window.dispatchEvent(new Event("starlight-auth-changed"));
     router.replace("/admin/login");
   }
 

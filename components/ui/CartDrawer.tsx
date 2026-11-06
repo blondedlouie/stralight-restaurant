@@ -1,12 +1,13 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Minus, Plus, ShoppingBag, Truck } from 'lucide-react';
 import { useCartStore } from '@/store/useCartStore';
 import Link from 'next/link';
 
 export const CartDrawer = () => {
+  const [simulationCheckout, setSimulationCheckout] = useState(false);
   const {
     items,
     isDrawerOpen,
@@ -21,6 +22,19 @@ export const CartDrawer = () => {
   const subtotal = getSubtotal();
   const total = getTotal();
   const { amountRemaining, percentage } = getFreeDeliveryProgress();
+
+  useEffect(() => {
+    let active = true;
+    void fetch("/api/sandbox/session", { cache: "no-store" })
+      .then(async (response) => response.ok ? await response.json() as { authorized: boolean; active: boolean } : null)
+      .then((session) => {
+        if (active) setSimulationCheckout(Boolean(session?.authorized && session.active));
+      })
+      .catch(() => {
+        if (active) setSimulationCheckout(false);
+      });
+    return () => { active = false; };
+  }, []);
 
   return (
     <AnimatePresence>
@@ -139,7 +153,7 @@ export const CartDrawer = () => {
                   onClick={() => setDrawerOpen(false)}
                   className="flex min-h-12 w-full items-center justify-center rounded-xl bg-yellow-400 py-3.5 font-extrabold text-purple-950 transition hover:bg-yellow-500"
                 >
-                  Checkout Now
+                  {simulationCheckout ? "Mock M-PESA Checkout (Admin)" : "Checkout Now"}
                 </Link>
               </div>
             )}
