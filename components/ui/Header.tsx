@@ -26,7 +26,7 @@ export const Header = () => {
           className="flex items-center gap-2.5 shrink-0"
           aria-label="Starlight Restaurant home"
         >
-          <img src="/images/starlight-logo.svg" alt="" className="h-10 w-10 rounded-full object-cover" />
+          <img src="/images/starlight-logo.png" alt="" className="h-10 w-10 rounded-full object-cover" />
           <div>
             <span className="font-extrabold text-xs sm:text-base tracking-tight text-brand-purple block leading-none">
               Starlight Restaurant
