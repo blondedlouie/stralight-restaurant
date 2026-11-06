@@ -21,7 +21,7 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const mockMode=process.env.NEXT_PUBLIC_ENABLE_SANDBOX==="true"&&process.env.NEXT_PUBLIC_USE_MOCK_DATA==="true";
+  const mockMode=process.env.NEXT_PUBLIC_ENABLE_SANDBOX==="true"&&process.env.NEXT_PUBLIC_USE_MOCK_DATA==="true"&&process.env.NODE_ENV!=="production";
   async function chooseMockRole(role:string){setLoading(true);const response=await fetch("/api/auth/session",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({role})});if(!response.ok){const body=await response.json();setError(body.error||"Unable to start mock session.");setLoading(false);return;}router.replace(roleHome[role]);}
 
   async function signIn(event: FormEvent<HTMLFormElement>) {
@@ -37,14 +37,16 @@ export default function AdminLoginPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ access_token: data.session.access_token, refresh_token: data.session.refresh_token, expires_in: data.session.expires_in }),
       });
+      const sessionResult = await cookieResponse.json().catch(() => null) as { error?: string; role?: string } | null;
       if (!cookieResponse.ok) {
-        const result = await cookieResponse.json().catch(() => null);
-        throw new Error(result?.error || "Could not secure the staff session.");
+        throw new Error(sessionResult?.error || "Could not secure the staff session.");
       }
 
-      const { data: profile } = await supabase.from("user_profiles").select("role").eq("user_id", data.user.id).maybeSingle();
       const next = new URLSearchParams(window.location.search).get("next");
-      router.replace(next?.startsWith("/admin/") ? next : roleHome[profile?.role || ""] || "/admin/forbidden");
+      const destination = sessionResult?.role === "super_admin" && next?.startsWith("/admin/")
+        ? next
+        : roleHome[sessionResult?.role || ""] || "/admin/forbidden";
+      router.replace(destination);
     } catch (loginError) {
       setError(loginError instanceof Error ? loginError.message : "Sign-in failed. Check your credentials.");
     } finally {
